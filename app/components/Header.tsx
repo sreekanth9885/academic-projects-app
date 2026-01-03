@@ -1,15 +1,24 @@
-'use client';
+"use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { FiChevronDown } from "react-icons/fi";
 
-export default function Header({ adminEmail, logout }: any) {
+export default function Header() {
+
   const [open, setOpen] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
+  const router = useRouter();
+
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  function logout() {
+    localStorage.removeItem("admin_logged_in");
+    router.push("/admin");
+  }
 
   useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+    function handleClickOutside(e: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
         setOpen(false);
       }
     }
@@ -20,32 +29,30 @@ export default function Header({ adminEmail, logout }: any) {
   }, []);
 
   return (
-    <header className="flex justify-between items-center bg-white shadow p-4">
-      <input
-        placeholder="Search..."
-        className="border rounded px-3 py-1 w-64"
-      />
+    <header className="bg-white p-4 shadow flex justify-end relative">
 
-      <div className="relative" ref={menuRef}>
+      <div ref={dropdownRef} className="relative">
+
         <button
           onClick={() => setOpen(!open)}
           className="flex items-center gap-2"
         >
-          {adminEmail || "Admin"}
-          <FiChevronDown />
+          Admin <FiChevronDown />
         </button>
 
         {open && (
-          <div className="absolute right-0 mt-2 bg-white shadow rounded w-40 z-50">
+          <div className="absolute right-0 mt-3 bg-white shadow rounded">
             <button
               onClick={logout}
-              className="block w-full text-left px-4 py-2 hover:bg-gray-100"
+              className="px-4 py-2 hover:bg-gray-100 w-full text-left"
             >
               Logout
             </button>
           </div>
         )}
+
       </div>
+
     </header>
   );
 }

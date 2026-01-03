@@ -1,59 +1,39 @@
-'use client';
+"use client";
 
 import { useState } from "react";
-import SidebarItem from "./SidebarItem";
-import {
-  AiOutlineProject,
-  AiOutlineHome,
-  AiOutlineUser,
-  AiOutlineLeft,
-  AiOutlineRight
-} from "react-icons/ai";
+import { FiMenu, FiUser, FiGrid } from "react-icons/fi";
+import Link from "next/link";
 
 export default function Sidebar() {
-  const [collapsed, setCollapsed] = useState(false);
+
+  const [open, setOpen] = useState(true);
 
   return (
-    <aside
-      className={`bg-white shadow h-full p-4 transition-all duration-300
-      ${collapsed ? "w-20" : "w-60"}
-    `}
-    >
-      {/* Top Bar */}
-      <div className="flex items-center justify-between">
-        {!collapsed && <h2 className="font-bold text-lg">Admin</h2>}
+    <aside className={`bg-gray-900 text-white p-4 transition-all 
+      ${open ? "w-64" : "w-16"}`}>
 
-        <button
-          onClick={() => setCollapsed(!collapsed)}
-          className="p-1 rounded hover:bg-gray-200"
-        >
-          {collapsed ? <AiOutlineRight size={20} /> : <AiOutlineLeft size={20} />}
-        </button>
-      </div>
+      <button onClick={() => setOpen(!open)} className="mb-6">
+        <FiMenu size={22} />
+      </button>
 
-      {/* Menu */}
-      <div className="mt-6 space-y-2">
-        <SidebarItem
-          label="Dashboard"
-          icon={<AiOutlineHome size={22} />}
-          href="/admin"
-          collapsed={collapsed}
-        />
+      <nav className="space-y-4">
 
-        <SidebarItem
-          label="Projects"
-          icon={<AiOutlineProject size={22} />}
-          href="/admin/projects"
-          collapsed={collapsed}
-        />
+        <Link href="/admin/dashboard" className="flex items-center gap-3">
+          <FiGrid />
+          {open && "Dashboard"}
+        </Link>
 
-        <SidebarItem
-          label="Users"
-          icon={<AiOutlineUser size={22} />}
-          href="/admin/users"
-          collapsed={collapsed}
-        />
-      </div>
+        <Link href="/admin/projects" className="flex items-center gap-3">
+          <FiGrid />
+          {open && "Projects"}
+        </Link>
+
+        <Link href="/admin/users" className="flex items-center gap-3">
+          <FiUser />
+          {open && "Users"}
+        </Link>
+
+      </nav>
     </aside>
   );
 }
