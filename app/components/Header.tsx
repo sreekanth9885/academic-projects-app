@@ -13,7 +13,8 @@ export default function Header() {
 
   function logout() {
     localStorage.removeItem("admin_logged_in");
-    router.push("/admin");
+localStorage.removeItem("admin_email");
+router.replace("/");
   }
 
   useEffect(() => {
