@@ -51,7 +51,7 @@ export default function AdminLogin() {
   return (
     <div className="flex h-screen justify-center items-center bg-gray-100">
       <form onSubmit={login} className="bg-white shadow p-6 rounded w-96">
-        <h2 className="text-2xl font-bold text-center mb-6">Admin Login Page Testing</h2>
+        <h2 className="text-2xl font-bold text-center mb-6">Admin Login Page</h2>
 
         <input
           required
