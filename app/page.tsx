@@ -16,13 +16,12 @@ export default function AdminLogin() {
 
     try {
       const res = await fetch(
-        `${API_BASE}/admin_login.php`,
+        `${API_BASE}/auth.php`,
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json"
           },
-          credentials: "include",   // REQUIRED for PHP sessions
           body: JSON.stringify({
             email,
             password
@@ -32,17 +31,24 @@ export default function AdminLogin() {
 
       const data = await res.json();
       console.log("Login response:", data);
+      
       if (data.status !== "success") {
         alert(data.message || "Invalid credentials");
         return;
       }
 
-      // localStorage.setItem("admin_logged_in", "true");
-      // localStorage.setItem("admin_email", email);
+      // Store admin data in localStorage
+      localStorage.setItem("admin_id", data.admin.id);
+      localStorage.setItem("admin_email", data.admin.email);
+      localStorage.setItem("admin_token", "true"); // Simple token flag
+
+      // Set a cookie or session storage for server-side checking
+      document.cookie = `admin_auth=true; path=/; max-age=${60 * 60 * 24}`; // 24 hours
 
       router.push("/admin/dashboard");
       router.refresh();
     } catch (err) {
+      console.error("Login error:", err);
       alert("Login failed — please try again");
     } finally {
       setLoading(false);
@@ -54,26 +60,38 @@ export default function AdminLogin() {
       <form onSubmit={login} className="bg-white shadow p-6 rounded w-96">
         <h2 className="text-2xl font-bold text-center mb-6">Admin Login</h2>
 
-        <input
-          required
-          className="border p-2 w-full mb-3"
-          placeholder="Email"
-          value={email}
-          onChange={e => setEmail(e.target.value)}
-        />
+        <div className="mb-4">
+          <label className="block text-gray-700 text-sm font-bold mb-2">
+            Email
+          </label>
+          <input
+            required
+            type="email"
+            className="border rounded w-full py-2 px-3 text-gray-700 focus:outline-none focus:shadow-outline"
+            placeholder="admin@example.com"
+            value={email}
+            onChange={e => setEmail(e.target.value)}
+          />
+        </div>
 
-        <input
-          required
-          type="password"
-          className="border p-2 w-full mb-5"
-          placeholder="Password"
-          value={password}
-          onChange={e => setPassword(e.target.value)}
-        />
+        <div className="mb-6">
+          <label className="block text-gray-700 text-sm font-bold mb-2">
+            Password
+          </label>
+          <input
+            required
+            type="password"
+            className="border rounded w-full py-2 px-3 text-gray-700 focus:outline-none focus:shadow-outline"
+            placeholder="Password"
+            value={password}
+            onChange={e => setPassword(e.target.value)}
+          />
+        </div>
 
         <button
+          type="submit"
           disabled={loading}
-          className="bg-blue-600 text-white py-2 w-full rounded disabled:opacity-70"
+          className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 w-full rounded focus:outline-none focus:shadow-outline disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {loading ? "Logging in..." : "Login"}
         </button>
