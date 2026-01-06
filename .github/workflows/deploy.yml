@@ -32,6 +32,6 @@ jobs:
           username: ${{ secrets.CPANEL_USER }}
           password: ${{ secrets.CPANEL_PASSWORD }}
           protocol: ftp
-          local_path: './out/*'
-          remote_path: '/public_html/admin.academicprojects.org/'
-          delete_remote_files: true
+          local-dir: './out/*'
+          server-dir: '/public_html/admin.academicprojects.org'
+          dangerous-clean-slate: true
