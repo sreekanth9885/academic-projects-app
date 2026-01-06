@@ -33,5 +33,5 @@ jobs:
           password: ${{ secrets.CPANEL_PASSWORD }}
           protocol: ftp
           local-dir: ./out/
-          server-dir: /
+          server-dir: '/'
           dangerous-clean-slate: true
