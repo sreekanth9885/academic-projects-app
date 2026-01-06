@@ -22,7 +22,7 @@ jobs:
         run: npm install
 
       - name: Build project
-        run: npm run build && npx next export
+        run: npm run build
 
       - name: Deploy to cPanel (FTP)
         uses: wlixcc/SFTP-Deploy-Action@v1.0
