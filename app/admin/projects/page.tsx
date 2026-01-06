@@ -23,7 +23,7 @@ export default function ProjectsPage() {
   async function loadProjects() {
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/projects.php`, {
+      const res = await fetch(`${API_BASE}/projects_list.php`, {
         credentials: "include"
       });
 
