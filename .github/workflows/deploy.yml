@@ -25,12 +25,13 @@ jobs:
         run: npm run build
 
       - name: Deploy to cPanel (FTP)
-        uses: wlixcc/SFTP-Deploy-Action@v1.0
+        uses: SamKirkland/FTP-Deploy-Action@v4
         with:
           server: ${{ secrets.CPANEL_HOST }}
           port: ${{ secrets.CPANEL_PORT }}
           username: ${{ secrets.CPANEL_USER }}
           password: ${{ secrets.CPANEL_PASSWORD }}
+          protocol: ftp
           local_path: './out/*'
           remote_path: '/public_html/admin.academicprojects.org/'
           delete_remote_files: true
