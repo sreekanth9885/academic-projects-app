@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { API_BASE } from "./constants";
 
 export default function AdminLogin() {
   const router = useRouter();
@@ -15,7 +16,7 @@ export default function AdminLogin() {
 
     try {
       const res = await fetch(
-        "https://academicprojects.org/api/admin_login.php",
+        `${API_BASE}/admin_login.php`,
         {
           method: "POST",
           headers: {
@@ -30,14 +31,14 @@ export default function AdminLogin() {
       );
 
       const data = await res.json();
-
+      console.log("Login response:", data);
       if (data.status !== "success") {
         alert(data.message || "Invalid credentials");
         return;
       }
 
-      localStorage.setItem("admin_logged_in", "true");
-      localStorage.setItem("admin_email", email);
+      // localStorage.setItem("admin_logged_in", "true");
+      // localStorage.setItem("admin_email", email);
 
       router.push("/admin/dashboard");
       router.refresh();
@@ -51,7 +52,7 @@ export default function AdminLogin() {
   return (
     <div className="flex h-screen justify-center items-center bg-gray-100">
       <form onSubmit={login} className="bg-white shadow p-6 rounded w-96">
-        <h2 className="text-2xl font-bold text-center mb-6">Admin Login Sandeep Pala</h2>
+        <h2 className="text-2xl font-bold text-center mb-6">Admin Login</h2>
 
         <input
           required
