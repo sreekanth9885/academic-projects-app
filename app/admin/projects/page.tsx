@@ -9,8 +9,10 @@ interface Project {
   id: string;
   title: string;
   description: string;
-  category: string;
+  category: string; // Changed from category to categories (comma-separated string)
   price: string;
+  documentation?: string;
+  code_files?: string;
   created_at?: string;
 }
 
@@ -28,6 +30,40 @@ interface ApiResponse {
   };
 }
 
+// Available categories/languages
+const CATEGORIES = [
+  "Python",
+  "JavaScript",
+  "Java",
+  "C++",
+  "C#",
+  "PHP",
+  "Ruby",
+  "Go",
+  "Swift",
+  "Kotlin",
+  "TypeScript",
+  "React",
+  "Vue.js",
+  "Angular",
+  "Node.js",
+  "Django",
+  "Flask",
+  "Laravel",
+  "Spring Boot",
+  "ASP.NET",
+  "Machine Learning",
+  "Data Science",
+  "Web Development",
+  "Mobile Development",
+  "Game Development",
+  "DevOps",
+  "Cybersecurity",
+  "Blockchain",
+  "IoT",
+  "Other"
+];
+
 export default function ProjectsPage() {
   const router = useRouter();
   const [projects, setProjects] = useState<Project[]>([]);
@@ -37,9 +73,12 @@ export default function ProjectsPage() {
   const [form, setForm] = useState({ 
     title: "", 
     description: "", 
-    category: "", 
-    price: "" 
+    categories: [] as string[], // Changed to array for multiple selection
+    price: "",
+    documentation: null as File | null,
+    code_files: null as File | null
   });
+  const [uploading, setUploading] = useState(false);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [adminEmail, setAdminEmail] = useState<string>("");
@@ -56,7 +95,7 @@ export default function ProjectsPage() {
     }
   }, [router]);
 
-  // Get authentication headers
+  // Get authentication headers for JSON requests
   function getAuthHeaders() {
     const token = localStorage.getItem("admin_token");
     return {
@@ -86,7 +125,7 @@ export default function ProjectsPage() {
       );
 
       const data: ApiResponse = await res.json();
-      
+      console.log("Load projects response:", data);
       if (data.status === "success" && data.data) {
         setProjects(data.data);
         if (data.pagination) {
@@ -110,47 +149,61 @@ export default function ProjectsPage() {
 
   async function saveProject(e: React.FormEvent) {
     e.preventDefault();
+    setUploading(true);
 
     if (!form.title.trim()) {
       toast.error("Title is required");
+      setUploading(false);
+      return;
+    }
+
+    if (form.categories.length === 0) {
+      toast.error("Please select at least one category");
+      setUploading(false);
       return;
     }
 
     const token = localStorage.getItem("admin_token");
     if (!token) {
       router.push("/admin/login");
+      setUploading(false);
       return;
     }
 
-    const url = `${API_BASE}/projects.php`;
-    const method = editing ? "PUT" : "POST";
+    // Create FormData for file upload
+    const formData = new FormData();
+    formData.append('title', form.title);
+    formData.append('description', form.description);
+    formData.append('categories', form.categories.join(', ')); // Join array to string
+    formData.append('price', form.price);
     
-    const bodyData = editing 
-      ? { 
-          id: editing.id,
-          title: form.title,
-          description: form.description,
-          price: parseFloat(form.price) || 0,
-          category: form.category 
-        }
-      : {
-          title: form.title,
-          description: form.description,
-          price: parseFloat(form.price) || 0,
-          category: form.category
-        };
+    if (editing?.id) {
+      formData.append('id', editing.id);
+    }
+    
+    if (form.documentation) {
+      formData.append('documentation', form.documentation);
+    }
+    
+    if (form.code_files) {
+      formData.append('code_files', form.code_files);
+    }
 
     try {
+      const url = `${API_BASE}/upload_project.php`;
       const res = await fetch(url, {
-        method: method,
-        headers: getAuthHeaders(),
-        body: JSON.stringify(bodyData)
+        method: editing ? "PUT" : "POST",
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+        body: formData
       });
 
       if (res.status === 401 || res.status === 403) {
         localStorage.clear();
         toast.error("Session expired. Please login again.");
         router.push("/admin/login");
+        setUploading(false);
         return;
       }
 
@@ -163,7 +216,14 @@ export default function ProjectsPage() {
         loadProjects(page);
         setModalOpen(false);
         setEditing(null);
-        setForm({ title: "", description: "", category: "", price: "" });
+        setForm({ 
+          title: "", 
+          description: "", 
+          categories: [], 
+          price: "",
+          documentation: null,
+          code_files: null
+        });
       } else {
         toast.error(json.message || "Operation failed");
       }
@@ -171,6 +231,8 @@ export default function ProjectsPage() {
     } catch (error) {
       console.error("Save project error:", error);
       toast.error("Error saving project");
+    } finally {
+      setUploading(false);
     }
   }
 
@@ -232,19 +294,72 @@ export default function ProjectsPage() {
 
   function handleEditClick(project: Project) {
     setEditing(project);
+    // Split comma-separated categories back to array
+    const categoriesArray = project.category 
+      ? project.category.split(',').map(cat => cat.trim()).filter(cat => cat)
+      : [];
+    
     setForm({
       title: project.title,
       description: project.description,
-      category: project.category || "",
-      price: project.price
+      categories: categoriesArray,
+      price: project.price,
+      documentation: null,
+      code_files: null
     });
     setModalOpen(true);
   }
 
   function resetForm() {
-    setForm({ title: "", description: "", category: "", price: "" });
+    setForm({ 
+      title: "", 
+      description: "", 
+      categories: [], 
+      price: "",
+      documentation: null,
+      code_files: null
+    });
     setEditing(null);
     setModalOpen(false);
+  }
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>, field: 'documentation' | 'code_files') {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      // Validate file type
+      if (field === 'code_files' && !file.name.endsWith('.zip')) {
+        toast.error("Please upload a ZIP file for code files");
+        return;
+      }
+      if (field === 'documentation' && !file.name.match(/\.(pdf|doc|docx|txt|md)$/i)) {
+        toast.error("Please upload a PDF, DOC, DOCX, TXT, or MD file for documentation");
+        return;
+      }
+      // Validate file size (10MB max)
+      if (file.size > 10 * 1024 * 1024) {
+        toast.error("File size should be less than 10MB");
+        return;
+      }
+      setForm(prev => ({ ...prev, [field]: file }));
+    }
+  }
+
+  function handleCategoryChange(category: string) {
+    setForm(prev => {
+      if (prev.categories.includes(category)) {
+        // Remove category if already selected
+        return {
+          ...prev,
+          categories: prev.categories.filter(c => c !== category)
+        };
+      } else {
+        // Add category if not selected
+        return {
+          ...prev,
+          categories: [...prev.categories, category]
+        };
+      }
+    });
   }
 
   return (
@@ -296,13 +411,13 @@ export default function ProjectsPage() {
                         Title
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Description
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Category
+                        Categories
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Price
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Files
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Created
@@ -315,23 +430,53 @@ export default function ProjectsPage() {
                   <tbody className="bg-white divide-y divide-gray-200">
                     {projects.map((project) => (
                       <tr key={project.id} className="hover:bg-gray-50 transition">
-                        <td className="px-6 py-4 whitespace-nowrap">
+                        <td className="px-6 py-4">
                           <div className="text-sm font-medium text-gray-900">
                             {project.title}
                           </div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="text-sm text-gray-900 line-clamp-2 max-w-xs">
+                          <div className="text-sm text-gray-500 line-clamp-1 max-w-xs">
                             {project.description}
                           </div>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
-                            {project.category || "Uncategorized"}
-                          </span>
+                        <td className="px-6 py-4">
+                          <div className="flex flex-wrap gap-1">
+                            {project.category 
+                              ? project.category.split(',').map((category, index) => (
+                                  <span 
+                                    key={index}
+                                    className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800"
+                                  >
+                                    {category.trim()}
+                                  </span>
+                                ))
+                              : <span className="text-gray-500">No categories</span>
+                            }
+                          </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                           ${parseFloat(project.price).toFixed(2)}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm">
+                          <div className="flex flex-col gap-1">
+                            {project.documentation && (
+                              <a 
+                                href={`${API_BASE}/uploads/${project.documentation}`}
+                                target="_blank"
+                                className="text-blue-600 hover:text-blue-800"
+                              >
+                                📄 Documentation
+                              </a>
+                            )}
+                            {project.code_files && (
+                              <a 
+                                href={`${API_BASE}/uploads/${project.code_files}`}
+                                target="_blank"
+                                className="text-blue-600 hover:text-blue-800"
+                              >
+                                📦 Code Files
+                              </a>
+                            )}
+                          </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                           {project.created_at ? 
@@ -394,87 +539,192 @@ export default function ProjectsPage() {
 
       {/* Modal */}
       {modalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
-            <div className="px-6 py-4 border-b">
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              resetForm();
+            }
+          }}
+        >
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="px-6 py-4 border-b flex justify-between items-center">
               <h3 className="text-lg font-semibold text-gray-900">
                 {editing ? "Edit Project" : "Add New Project"}
               </h3>
+              <button
+                type="button"
+                onClick={resetForm}
+                className="text-gray-400 hover:text-gray-500 text-xl"
+              >
+                ×
+              </button>
             </div>
             
             <form onSubmit={saveProject} className="p-6">
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Title *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Project title"
-                    value={form.title}
-                    onChange={(e) => setForm({...form, title: e.target.value})}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Description
-                  </label>
-                  <textarea
-                    className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Project description"
-                    rows={3}
-                    value={form.description}
-                    onChange={(e) => setForm({...form, description: e.target.value})}
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="md:col-span-2">
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Category
+                      Title *
                     </label>
                     <input
                       type="text"
+                      required
                       className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="e.g., Web Development"
-                      value={form.category}
-                      onChange={(e) => setForm({...form, category: e.target.value})}
+                      placeholder="Project title"
+                      value={form.title}
+                      onChange={(e) => setForm({...form, title: e.target.value})}
                     />
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Description
+                    </label>
+                    <textarea
+                      className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Project description"
+                      rows={4}
+                      value={form.description}
+                      onChange={(e) => setForm({...form, description: e.target.value})}
+                    />
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Categories *
+                    </label>
+                    <div className="p-3 border border-gray-300 rounded max-h-60 overflow-y-auto">
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                        {CATEGORIES.map((category) => (
+                          <div key={category} className="flex items-center">
+                            <input
+                              type="checkbox"
+                              id={`category-${category}`}
+                              checked={form.categories.includes(category)}
+                              onChange={() => handleCategoryChange(category)}
+                              className="h-4 w-4 text-blue-600 rounded focus:ring-blue-500"
+                            />
+                            <label 
+                              htmlFor={`category-${category}`}
+                              className="ml-2 text-sm text-gray-700 cursor-pointer"
+                            >
+                              {category}
+                            </label>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="mt-2">
+                      <p className="text-sm text-gray-500">
+                        Selected: {form.categories.length > 0 
+                          ? form.categories.join(', ') 
+                          : 'None'}
+                      </p>
+                    </div>
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Price ($)
+                      Price ($) *
                     </label>
                     <input
                       type="number"
                       step="0.01"
                       min="0"
+                      required
                       className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="0.00"
                       value={form.price}
                       onChange={(e) => setForm({...form, price: e.target.value})}
                     />
                   </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Documentation
+                    </label>
+                    <div className="border-2 border-dashed border-gray-300 rounded p-4 text-center">
+                      <input
+                        type="file"
+                        id="documentation"
+                        className="hidden"
+                        accept=".pdf,.doc,.docx,.txt,.md"
+                        onChange={(e) => handleFileChange(e, 'documentation')}
+                      />
+                      <label htmlFor="documentation" className="cursor-pointer">
+                        <div className="flex flex-col items-center">
+                          <svg className="w-8 h-8 text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                          </svg>
+                          <span className="text-sm text-gray-600">
+                            {form.documentation 
+                              ? form.documentation.name 
+                              : "Upload documentation (PDF, DOC, DOCX, TXT, MD)"}
+                          </span>
+                          <span className="text-xs text-gray-500 mt-1">Max 10MB</span>
+                        </div>
+                      </label>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Code Files (ZIP)
+                    </label>
+                    <div className="border-2 border-dashed border-gray-300 rounded p-4 text-center">
+                      <input
+                        type="file"
+                        id="code_files"
+                        className="hidden"
+                        accept=".zip"
+                        onChange={(e) => handleFileChange(e, 'code_files')}
+                      />
+                      <label htmlFor="code_files" className="cursor-pointer">
+                        <div className="flex flex-col items-center">
+                          <svg className="w-8 h-8 text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                          </svg>
+                          <span className="text-sm text-gray-600">
+                            {form.code_files 
+                              ? form.code_files.name 
+                              : "Upload code files (ZIP format)"}
+                          </span>
+                          <span className="text-xs text-gray-500 mt-1">Max 10MB</span>
+                        </div>
+                      </label>
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              <div className="flex justify-end gap-3 mt-6 pt-4 border-t">
+              <div className="flex justify-end gap-3 mt-8 pt-6 border-t">
                 <button
                   type="button"
                   onClick={resetForm}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded transition"
+                  className="px-5 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded transition"
+                  disabled={uploading}
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded transition"
+                  className="px-5 py-2.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={uploading}
                 >
-                  {editing ? "Update Project" : "Create Project"}
+                  {uploading ? (
+                    <span className="flex items-center">
+                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                      {editing ? "Updating..." : "Creating..."}
+                    </span>
+                  ) : (
+                    editing ? "Update Project" : "Create Project"
+                  )}
                 </button>
               </div>
             </form>
