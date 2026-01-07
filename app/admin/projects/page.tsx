@@ -292,7 +292,7 @@ export default function ProjectsPage() {
       console.error("Logout error:", error);
     } finally {
       localStorage.clear();
-      router.push("/admin/login");
+      router.push("/");
     }
   }
 

@@ -16,7 +16,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       const email = localStorage.getItem("admin_email");
       
       if (!token || !email) {
-        router.push("/admin/login");
+        router.push("/");
       } else {
         setIsLoading(false);
       }
