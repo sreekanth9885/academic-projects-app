@@ -148,130 +148,134 @@ export default function ProjectsPage() {
   }, [page]);
 
   async function saveProject(e: React.FormEvent) {
-    e.preventDefault();
-    setUploading(true);
+  e.preventDefault();
+  setUploading(true);
 
-    if (!form.title.trim()) {
-      toast.error("Title is required");
-      setUploading(false);
-      return;
-    }
+  if (!form.title.trim()) {
+    toast.error("Title is required");
+    setUploading(false);
+    return;
+  }
 
-    if (form.categories.length === 0) {
-      toast.error("Please select at least one category");
-      setUploading(false);
-      return;
-    }
+  if (form.categories.length === 0) {
+    toast.error("Please select at least one category");
+    setUploading(false);
+    return;
+  }
 
-    const token = localStorage.getItem("admin_token");
-    if (!token) {
+  const token = localStorage.getItem("admin_token");
+  if (!token) {
+    router.push("/admin/login");
+    setUploading(false);
+    return;
+  }
+
+  // Create FormData for file upload
+  const formData = new FormData();
+  formData.append('title', form.title);
+  formData.append('description', form.description);
+  formData.append('categories', form.categories.join(', '));
+  formData.append('price', form.price);
+  
+  if (editing?.id) {
+    formData.append('id', editing.id);
+  }
+  
+  if (form.documentation) {
+    formData.append('documentation', form.documentation);
+  }
+  
+  if (form.code_files) {
+    formData.append('code_files', form.code_files);
+  }
+
+  try {
+    // Now use only projects.php for everything
+    const url = `${API_BASE}/projects.php`;
+    const res = await fetch(url, {
+      method: "POST", // Always use POST for form data
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+      body: formData
+    });
+
+    if (res.status === 401 || res.status === 403) {
+      localStorage.clear();
+      toast.error("Session expired. Please login again.");
       router.push("/admin/login");
       setUploading(false);
       return;
     }
 
-    // Create FormData for file upload
-    const formData = new FormData();
-    formData.append('title', form.title);
-    formData.append('description', form.description);
-    formData.append('categories', form.categories.join(', ')); // Join array to string
-    formData.append('price', form.price);
-    
-    if (editing?.id) {
-      formData.append('id', editing.id);
-    }
-    
-    if (form.documentation) {
-      formData.append('documentation', form.documentation);
-    }
-    
-    if (form.code_files) {
-      formData.append('code_files', form.code_files);
-    }
+    const json: ApiResponse = await res.json();
 
-    try {
-      const url = `${API_BASE}/upload_project.php`;
-      const res = await fetch(url, {
-        method: editing ? "PUT" : "POST",
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-        body: formData
+    if (json.status === "success") {
+      toast.success(
+        editing ? "Project updated successfully!" : "Project created successfully!"
+      );
+      loadProjects(page);
+      setModalOpen(false);
+      setEditing(null);
+      setForm({ 
+        title: "", 
+        description: "", 
+        categories: [], 
+        price: "",
+        documentation: null,
+        code_files: null
       });
-
-      if (res.status === 401 || res.status === 403) {
-        localStorage.clear();
-        toast.error("Session expired. Please login again.");
-        router.push("/admin/login");
-        setUploading(false);
-        return;
-      }
-
-      const json: ApiResponse = await res.json();
-
-      if (json.status === "success") {
-        toast.success(
-          editing ? "Project updated successfully!" : "Project created successfully!"
-        );
-        loadProjects(page);
-        setModalOpen(false);
-        setEditing(null);
-        setForm({ 
-          title: "", 
-          description: "", 
-          categories: [], 
-          price: "",
-          documentation: null,
-          code_files: null
-        });
-      } else {
-        toast.error(json.message || "Operation failed");
-      }
-
-    } catch (error) {
-      console.error("Save project error:", error);
-      toast.error("Error saving project");
-    } finally {
-      setUploading(false);
+    } else {
+      toast.error(json.message || "Operation failed");
     }
+
+  } catch (error) {
+    console.error("Save project error:", error);
+    toast.error("Error saving project");
+  } finally {
+    setUploading(false);
   }
+}
 
   async function deleteProject(id: string) {
-    if (!confirm("Are you sure you want to delete this project?")) return;
+  if (!confirm("Are you sure you want to delete this project?")) return;
 
-    const token = localStorage.getItem("admin_token");
-    if (!token) {
+  const token = localStorage.getItem("admin_token");
+  if (!token) {
+    router.push("/admin/login");
+    return;
+  }
+
+  try {
+    const res = await fetch(`${API_BASE}/projects.php?id=${id}`, {
+      method: "DELETE",
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Accept': 'application/json'
+      }
+    });
+
+    if (res.status === 401 || res.status === 403) {
+      localStorage.clear();
+      toast.error("Session expired. Please login again.");
       router.push("/admin/login");
       return;
     }
 
-    try {
-      const res = await fetch(`${API_BASE}/projects.php?id=${id}`, {
-        method: "DELETE",
-        headers: getAuthHeaders()
-      });
+    const json: ApiResponse = await res.json();
 
-      if (res.status === 401 || res.status === 403) {
-        localStorage.clear();
-        toast.error("Session expired. Please login again.");
-        router.push("/admin/login");
-        return;
-      }
-
-      const json: ApiResponse = await res.json();
-
-      if (json.status === "success") {
-        toast.success("Project deleted successfully!");
-        loadProjects(page);
-      } else {
-        toast.error(json.message || "Delete failed");
-      }
-
-    } catch (error) {
-      console.error("Delete project error:", error);
-      toast.error("Error deleting project");
+    if (json.status === "success") {
+      toast.success("Project deleted successfully!");
+      loadProjects(page);
+    } else {
+      toast.error(json.message || "Delete failed");
     }
+
+  } catch (error) {
+    console.error("Delete project error:", error);
+    toast.error("Error deleting project");
   }
+}
 
   async function logout() {
     try {
