@@ -15,19 +15,16 @@ export default function AdminLogin() {
     setLoading(true);
 
     try {
-      const res = await fetch(
-        `${API_BASE}/auth.php`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({
-            email,
-            password
-          })
-        }
-      );
+      const res = await fetch(`${API_BASE}/auth.php`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          email,
+          password
+        })
+      });
 
       const data = await res.json();
       console.log("Login response:", data);
@@ -37,13 +34,10 @@ export default function AdminLogin() {
         return;
       }
 
-      // Store admin data in localStorage
+      // Store token and admin data
+      localStorage.setItem("admin_token", data.token);
       localStorage.setItem("admin_id", data.admin.id);
       localStorage.setItem("admin_email", data.admin.email);
-      localStorage.setItem("admin_token", "true"); // Simple token flag
-
-      // Set a cookie or session storage for server-side checking
-      document.cookie = `admin_auth=true; path=/; max-age=${60 * 60 * 24}`; // 24 hours
 
       router.push("/admin/dashboard");
       router.refresh();

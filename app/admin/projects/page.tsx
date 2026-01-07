@@ -19,6 +19,7 @@ interface ApiResponse {
   message?: string;
   data?: Project[];
   project?: Project;
+  token?: string;
   pagination?: {
     page: number;
     limit: number;
@@ -43,7 +44,7 @@ export default function ProjectsPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [adminEmail, setAdminEmail] = useState<string>("");
 
-  // Initialize admin email after component mounts (client-side only)
+  // Initialize after component mounts
   useEffect(() => {
     const email = localStorage.getItem("admin_email") || "";
     setAdminEmail(email);
@@ -55,38 +56,34 @@ export default function ProjectsPage() {
     }
   }, [router]);
 
-  // Fix CORS issue by removing credentials for cross-origin requests
-  // Or add proxy in Next.js
-  function checkAuth(): boolean {
-    if (typeof window === 'undefined') return false;
-    
-    const adminToken = localStorage.getItem("admin_token");
-    return !!adminToken;
+  // Get authentication headers
+  function getAuthHeaders() {
+    const token = localStorage.getItem("admin_token");
+    return {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+      'Accept': 'application/json'
+    };
   }
 
   async function loadProjects(pageNum: number = 1) {
-    if (!checkAuth()) return;
+    const token = localStorage.getItem("admin_token");
+    if (!token) {
+      router.push("/admin/login");
+      return;
+    }
     
     setLoading(true);
 
     try {
-      // Remove credentials: 'include' for CORS issues
       const res = await fetch(
         `${API_BASE}/projects.php?page=${pageNum}&limit=10`,
         {
-          // credentials: 'include' // Remove this for CORS
           headers: {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json',
+            'Accept': 'application/json'
           }
         }
       );
-
-      if (res.status === 401 || res.status === 403) {
-        localStorage.clear();
-        router.push("/admin/login");
-        return;
-      }
 
       const data: ApiResponse = await res.json();
       
@@ -119,7 +116,8 @@ export default function ProjectsPage() {
       return;
     }
 
-    if (!checkAuth()) {
+    const token = localStorage.getItem("admin_token");
+    if (!token) {
       router.push("/admin/login");
       return;
     }
@@ -145,17 +143,13 @@ export default function ProjectsPage() {
     try {
       const res = await fetch(url, {
         method: method,
-        headers: {
-          "Content-Type": "application/json",
-          "Accept": "application/json"
-        },
-        // Remove credentials for CORS
-        // credentials: 'include',
+        headers: getAuthHeaders(),
         body: JSON.stringify(bodyData)
       });
 
       if (res.status === 401 || res.status === 403) {
         localStorage.clear();
+        toast.error("Session expired. Please login again.");
         router.push("/admin/login");
         return;
       }
@@ -183,7 +177,8 @@ export default function ProjectsPage() {
   async function deleteProject(id: string) {
     if (!confirm("Are you sure you want to delete this project?")) return;
 
-    if (!checkAuth()) {
+    const token = localStorage.getItem("admin_token");
+    if (!token) {
       router.push("/admin/login");
       return;
     }
@@ -191,15 +186,12 @@ export default function ProjectsPage() {
     try {
       const res = await fetch(`${API_BASE}/projects.php?id=${id}`, {
         method: "DELETE",
-        headers: {
-          "Accept": "application/json"
-        }
-        // Remove credentials for CORS
-        // credentials: 'include'
+        headers: getAuthHeaders()
       });
 
       if (res.status === 401 || res.status === 403) {
         localStorage.clear();
+        toast.error("Session expired. Please login again.");
         router.push("/admin/login");
         return;
       }
@@ -219,17 +211,23 @@ export default function ProjectsPage() {
     }
   }
 
-  function logout() {
-    // Call logout API endpoint
-    fetch(`${API_BASE}/auth.php?logout=true`, {
-      headers: {
-        "Accept": "application/json"
+  async function logout() {
+    try {
+      const token = localStorage.getItem("admin_token");
+      if (token) {
+        await fetch(`${API_BASE}/auth.php?logout=true`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Accept': 'application/json'
+          }
+        });
       }
-    }).finally(() => {
+    } catch (error) {
+      console.error("Logout error:", error);
+    } finally {
       localStorage.clear();
-      document.cookie = "admin_auth=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;";
       router.push("/admin/login");
-    });
+    }
   }
 
   function handleEditClick(project: Project) {
