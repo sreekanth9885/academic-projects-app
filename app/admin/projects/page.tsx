@@ -1,7 +1,7 @@
 "use client";
 
 import { API_BASE } from "@/app/constants";
-import { useEffect, useState } from "react";
+import { act, useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
 
@@ -11,6 +11,7 @@ interface Project {
   description: string;
   category: string; // Changed from category to categories (comma-separated string)
   price: string;
+  actual_price: string;
   documentation?: string;
   code_files?: string;
   created_at?: string;
@@ -75,6 +76,7 @@ export default function ProjectsPage() {
     description: "", 
     categories: [] as string[], // Changed to array for multiple selection
     price: "",
+    actual_price: "",
     documentation: null as File | null,
     code_files: null as File | null
   });
@@ -150,7 +152,17 @@ export default function ProjectsPage() {
   async function saveProject(e: React.FormEvent) {
   e.preventDefault();
   setUploading(true);
+    if (!form.actual_price) {
+  toast.error("Actual price is required");
+  setUploading(false);
+  return;
+}
 
+if (Number(form.actual_price) < Number(form.price)) {
+  toast.error("Actual price must be greater than or equal to price");
+  setUploading(false);
+  return;
+}
   if (!form.title.trim()) {
     toast.error("Title is required");
     setUploading(false);
@@ -176,6 +188,7 @@ export default function ProjectsPage() {
   formData.append('description', form.description);
   formData.append('categories', form.categories.join(', '));
   formData.append('price', form.price);
+  formData.append('actual_price', form.actual_price);
   
   if (editing?.id) {
     formData.append('id', editing.id);
@@ -222,6 +235,7 @@ export default function ProjectsPage() {
         description: "", 
         categories: [], 
         price: "",
+        actual_price: "",
         documentation: null,
         code_files: null
       });
@@ -308,6 +322,7 @@ export default function ProjectsPage() {
       description: project.description,
       categories: categoriesArray,
       price: project.price,
+      actual_price: project.actual_price,
       documentation: null,
       code_files: null
     });
@@ -320,6 +335,7 @@ export default function ProjectsPage() {
       description: "", 
       categories: [], 
       price: "",
+      actual_price: "",
       documentation: null,
       code_files: null
     });
@@ -457,9 +473,14 @@ export default function ProjectsPage() {
                             }
                           </div>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          ${parseFloat(project.price).toFixed(2)}
-                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm">
+  <div className="text-gray-900 font-semibold">
+    ${parseFloat(project.price).toFixed(2)}
+  </div>
+  <div className="text-gray-500 line-through text-xs">
+    ${parseFloat(project.actual_price).toFixed(2)}
+  </div>
+</td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm">
                           <div className="flex flex-col gap-1">
                             {project.documentation && (
@@ -629,7 +650,21 @@ export default function ProjectsPage() {
                       </p>
                     </div>
                   </div>
-
+                  <div>
+  <label className="block text-sm font-medium text-gray-700 mb-1">
+    Actual Price ($) *
+  </label>
+  <input
+    type="number"
+    step="0.01"
+    min="0"
+    required
+    className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+    placeholder="0.00"
+    value={form.actual_price}
+    onChange={(e) => setForm({...form, actual_price: e.target.value})}
+  />
+</div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Price ($) *
