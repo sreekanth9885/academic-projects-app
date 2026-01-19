@@ -36,7 +36,7 @@ router.replace("/");
 
         <button
           onClick={() => setOpen(!open)}
-          className="flex items-center gap-2"
+          className="flex items-center gap-2 cursor-pointer"
         >
           Admin <FiChevronDown />
         </button>
@@ -45,7 +45,7 @@ router.replace("/");
           <div className="absolute right-0 mt-3 bg-white shadow rounded">
             <button
               onClick={logout}
-              className="px-4 py-2 hover:bg-gray-100 w-full text-left"
+              className="px-4 py-2 hover:bg-gray-100 w-full text-left cursor-pointer"
             >
               Logout
             </button>

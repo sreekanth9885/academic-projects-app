@@ -4,6 +4,7 @@ import { API_BASE } from "@/app/constants";
 import { act, useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
+import { IndianRupee } from "lucide-react";
 
 interface Project {
   id: string;
@@ -395,13 +396,13 @@ if (Number(form.actual_price) < Number(form.price)) {
         <div className="flex gap-3">
           <button
             onClick={() => setModalOpen(true)}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded transition"
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded transition cursor-pointer"
           >
             + Add Project
           </button>
           <button
             onClick={logout}
-            className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded transition"
+            className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded transition cursor-pointer"
           >
             Logout
           </button>
@@ -475,10 +476,16 @@ if (Number(form.actual_price) < Number(form.price)) {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm">
   <div className="text-gray-900 font-semibold">
-    ${parseFloat(project.price).toFixed(2)}
+    <div className="flex items-center">
+<IndianRupee className="w-3 h-3" />{parseFloat(project.price).toFixed(2)}
+    </div>
+    
   </div>
   <div className="text-gray-500 line-through text-xs">
-    ${parseFloat(project.actual_price).toFixed(2)}
+    <div className="flex items-center">
+<IndianRupee className="w-3 h-3" /> {parseFloat(project.actual_price).toFixed(2)}
+    </div>
+    
   </div>
 </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm">
@@ -512,13 +519,13 @@ if (Number(form.actual_price) < Number(form.price)) {
                           <div className="flex gap-2">
                             <button
                               onClick={() => handleEditClick(project)}
-                              className="text-indigo-600 hover:text-indigo-900 bg-indigo-50 hover:bg-indigo-100 px-3 py-1 rounded transition"
+                              className="text-indigo-600 hover:text-indigo-900 bg-indigo-50 hover:bg-indigo-100 px-3 py-1 rounded transition cursor-pointer"
                             >
                               Edit
                             </button>
                             <button
                               onClick={() => deleteProject(project.id)}
-                              className="text-red-600 hover:text-red-900 bg-red-50 hover:bg-red-100 px-3 py-1 rounded transition"
+                              className="text-red-600 hover:text-red-900 bg-red-50 hover:bg-red-100 px-3 py-1 rounded transition cursor-pointer"
                             >
                               Delete
                             </button>
@@ -542,14 +549,14 @@ if (Number(form.actual_price) < Number(form.price)) {
                       <button
                         onClick={() => setPage(p => Math.max(1, p - 1))}
                         disabled={page === 1}
-                        className="px-4 py-2 border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 transition"
+                        className="px-4 py-2 border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 transition cursor-pointer"
                       >
                         Previous
                       </button>
                       <button
                         onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                         disabled={page === totalPages}
-                        className="px-4 py-2 border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 transition"
+                        className="px-4 py-2 border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 transition cursor-pointer"
                       >
                         Next
                       </button>
@@ -743,14 +750,14 @@ if (Number(form.actual_price) < Number(form.price)) {
                 <button
                   type="button"
                   onClick={resetForm}
-                  className="px-5 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded transition"
+                  className="px-5 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded transition cursor-pointer"
                   disabled={uploading}
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-5 py-2.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                   disabled={uploading}
                 >
                   {uploading ? (
