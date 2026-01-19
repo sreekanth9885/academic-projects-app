@@ -12,7 +12,7 @@ export default function Sidebar() {
     <aside className={`bg-gray-900 text-white p-4 transition-all 
       ${open ? "w-64" : "w-16"}`}>
 
-      <button onClick={() => setOpen(!open)} className="mb-6">
+      <button onClick={() => setOpen(!open)} className="mb-6 cursor-pointer">
         <FiMenu size={22} />
       </button>
 
